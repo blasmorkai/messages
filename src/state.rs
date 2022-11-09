@@ -12,6 +12,7 @@ pub struct Message {
     pub message: String
 }
 
+// CURRENT_ID is an increasing counter per Message struct stored on the MESSAGES Map
 pub const CURRENT_ID: Item<u128> = Item::new("current_id");
 
 //Map has a 
