@@ -56,9 +56,6 @@ pub fn add_message(
 
     id = id.checked_add(1).unwrap();
 
-    // let address = deps.api.addr_validate(address.as_str())?;
-    // assert_eq!(info.sender, )
-
     // Update message and updated id
     MESSAGES.save(deps.storage, id, &message)?;
     CURRENT_ID.save(deps.storage, &id)?;
@@ -81,50 +78,50 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_current_id(deps: Deps) -> StdResult<Uint128> {
+    // Load the current id
     let id = CURRENT_ID.load(deps.storage)?;
     Ok(Uint128::from(id))
 }
 
 fn query_all_messages(deps: Deps) -> StdResult<MessagesResponse> {
-    // Query all  Messages entries (u128, Message), map only Messages, no filter
+    // Query all  Messages entries (u128, Message), map only Message, no filter
     let messages = MESSAGES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|map_data| map_data.unwrap().1)
         .collect();
-    Ok(MessagesResponse { messages: messages })
+    Ok(MessagesResponse { messages })
 }
 
 fn query_messages_by_addr(deps: Deps, address: String) -> StdResult<MessagesResponse> {
-    // Query all  Messages entries (u128, Message), map only Messages, filter messages whose owner is address
-
+    // Query all  Messages entries (u128, Message), map only Message, filter messages whose owner is address
     let messages = MESSAGES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|map_entry| map_entry.unwrap().1)
         .filter(|message| message.owner == address)
         .collect();
-    Ok(MessagesResponse { messages: messages })
+    Ok(MessagesResponse { messages })
 }
 
 fn query_messages_by_topic(deps: Deps, topic: String) -> StdResult<MessagesResponse> {
-    // Query all  Messages entries (u128, Message), map only Messages, filter messages with topic parameter
+    // Query all  Messages entries (u128, Message), map only Message, filter messages with topic parameter
     let messages = MESSAGES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|map_entry| map_entry.unwrap().1)
         .filter(|message| message.topic == topic)
         .collect();
 
-    Ok(MessagesResponse { messages: messages })
+    Ok(MessagesResponse { messages })
 }
 
 fn query_messages_by_id(deps: Deps, id: Uint128) -> StdResult<MessagesResponse> {
-    // Query all  Messages entries (u128, Message), map only Messages, filter messages with id parameter
+    // Query all  Messages entries (u128, Message), map only Message, filter messages with id parameter
     let messages = MESSAGES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|map_entry| map_entry.unwrap().1)
         .filter(|message| message.id == id)
         .collect();
 
-    Ok(MessagesResponse { messages: messages })
+    Ok(MessagesResponse { messages })
 }
 
 #[cfg(test)]
