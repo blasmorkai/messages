@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Uint128,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Uint128,
 };
 //use cw2::set_contract_version;
 
@@ -131,7 +131,7 @@ fn query_messages_by_id(deps: Deps, id: Uint128) -> StdResult<MessagesResponse> 
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{attr, coins, from_binary};
+    use cosmwasm_std::{attr, from_binary};
 
     const SENDER: &str = "sender_address";
     const ANOTHER_SENDER: &str = "another_address";
@@ -245,7 +245,7 @@ mod tests {
             message: "Science is beautiful".to_string(),
         };
 
-        let res = execute(
+        let _res = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(SENDER, &[]),
@@ -258,7 +258,7 @@ mod tests {
             message: "1".to_string(),
         };
 
-        let res = execute(
+        let _res = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(ANOTHER_SENDER, &[]),
@@ -301,7 +301,7 @@ mod tests {
             message: "Science is beautiful".to_string(),
         };
 
-        let res = execute(
+        let _res = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(SENDER, &[]),
@@ -314,7 +314,7 @@ mod tests {
             message: "1".to_string(),
         };
 
-        let res = execute(
+        let _res = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(ANOTHER_SENDER, &[]),
