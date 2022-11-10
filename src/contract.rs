@@ -56,12 +56,15 @@ pub fn add_message(
 
     id = id.checked_add(1).unwrap();
 
+    // let address = deps.api.addr_validate(address.as_str())?;
+    // assert_eq!(info.sender, )
+
     // Update message and updated id
     MESSAGES.save(deps.storage, id, &message)?;
     CURRENT_ID.save(deps.storage, &id)?;
     Ok(Response::new()
         .add_attribute("action", "add_message")
-        .add_attribute("message id", message.id.to_string()))
+        .add_attribute("message_id", message.id.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -93,6 +96,7 @@ fn query_all_messages(deps: Deps) -> StdResult<MessagesResponse> {
 
 fn query_messages_by_addr(deps: Deps, address: String) -> StdResult<MessagesResponse> {
     // Query all  Messages entries (u128, Message), map only Messages, filter messages whose owner is address
+
     let messages = MESSAGES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|map_entry| map_entry.unwrap().1)
@@ -127,9 +131,10 @@ fn query_messages_by_id(deps: Deps, id: Uint128) -> StdResult<MessagesResponse> 
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{attr, coins, from_binary};
 
     const SENDER: &str = "sender_address";
+    const ANOTHER_SENDER: &str = "another_address";
 
     fn setup_contract(deps: DepsMut) {
         let msg = InstantiateMsg {};
@@ -153,29 +158,241 @@ mod tests {
     fn _add_message() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Science is beautiful".to_string(),
+        };
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(SENDER, &[]),
+            msg.clone(),
+        )
+        .unwrap();
+
+        // The first message is message_id 0
+        assert_eq!(
+            res.attributes,
+            vec![attr("action", "add_message"), attr("message_id", "0")]
+        );
+
+        let res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        // The second message is message_id 1
+        assert_eq!(
+            res.attributes,
+            vec![attr("action", "add_message"), attr("message_id", "1")]
+        );
+
+        // The counter for the next message is set to 1
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCurrentId {}).unwrap();
+        let value: Uint128 = from_binary(&res).unwrap();
+        assert_eq!(Uint128::from(2u128), value);
     }
 
     #[test]
     fn _query_all_messages() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Science is beautiful".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Do not ever forget science".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 1 = 2".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 2 = 3".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 3 = 4".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let response = query_all_messages(deps.as_ref()).unwrap();
+        assert_eq!(response.messages.len(), 5);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCurrentId {}).unwrap();
+        let value: Uint128 = from_binary(&res).unwrap();
+        assert_eq!(Uint128::from(5u128), value);
     }
 
     #[test]
     fn _query_messages_by_owner() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Science is beautiful".to_string(),
+        };
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(SENDER, &[]),
+            msg.clone(),
+        )
+        .unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1".to_string(),
+        };
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(ANOTHER_SENDER, &[]),
+            msg,
+        )
+        .unwrap();
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetMessagesByAddr {
+                address: SENDER.to_string(),
+            },
+        )
+        .unwrap();
+
+        let response: MessagesResponse = from_binary(&res).unwrap();
+        assert_eq!(response.messages.len(), 1);
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetMessagesByAddr {
+                address: ANOTHER_SENDER.to_string(),
+            },
+        )
+        .unwrap();
+
+        let response: MessagesResponse = from_binary(&res).unwrap();
+        assert_eq!(response.messages.len(), 1);
     }
 
     #[test]
     fn _query_messages_by_id() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Science is beautiful".to_string(),
+        };
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(SENDER, &[]),
+            msg.clone(),
+        )
+        .unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1".to_string(),
+        };
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(ANOTHER_SENDER, &[]),
+            msg,
+        )
+        .unwrap();
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetMessagesById {
+                id: Uint128::from(1u128),
+            },
+        )
+        .unwrap();
+
+        let response: MessagesResponse = from_binary(&res).unwrap();
+        assert_eq!(response.messages.len(), 1);
     }
 
     #[test]
     fn _query_messages_by_topic() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Science is beautiful".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Science".to_string(),
+            message: "Do not ever forget science".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 1 = 2".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 2 = 3".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::AddMessage {
+            topic: "Math".to_string(),
+            message: "1 + 3 = 4".to_string(),
+        };
+
+        let _res = execute(deps.as_mut(), mock_env(), mock_info(SENDER, &[]), msg).unwrap();
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetMessagesByTopic {
+                topic: "Math".to_string(),
+            },
+        )
+        .unwrap();
+
+        let response: MessagesResponse = from_binary(&res).unwrap();
+        assert_eq!(response.messages.len(), 3);
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::GetMessagesByTopic {
+                topic: "Science".to_string(),
+            },
+        )
+        .unwrap();
+
+        let response: MessagesResponse = from_binary(&res).unwrap();
+        assert_eq!(response.messages.len(), 2);
     }
 }
